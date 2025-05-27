@@ -1,0 +1,49 @@
+function pogrubDolneKrawedzieNaPodstawieKolumnyA() {
+  const arkusz = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = arkusz.getLastRow();
+  const lastCol = arkusz.getLastColumn();
+  
+  const zakresyScalone = arkusz.getRange(1, 1, lastRow).getMergedRanges();
+  const wierszeDoPobrania = new Set();
+
+  // Dodaj końce scalonych zakresów w kolumnie A
+  zakresyScalone.forEach(zakres => {
+    if (zakres.getColumn() === 1) {
+      const start = zakres.getRow();
+      const end = start + zakres.getNumRows() - 1;
+      wierszeDoPobrania.add(end);
+    }
+  });
+
+  // Dodaj niescalone pojedyncze wiersze w kolumnie A
+  const kolumnaA = arkusz.getRange(1, 1, lastRow).getValues();
+  for (let i = 0; i < lastRow; i++) {
+    const czyScalony = zakresyScalone.some(zakres =>
+      zakres.getColumn() === 1 &&
+      i + 1 >= zakres.getRow() &&
+      i + 1 <= zakres.getRow() + zakres.getNumRows() - 1
+    );
+    if (!czyScalony && kolumnaA[i][0] !== "") {
+      wierszeDoPobrania.add(i + 1);
+    }
+  }
+
+  // Dla każdego takiego wiersza — ustal rzeczywisty scalony zakres pionowy (jeśli istnieje)
+  wierszeDoPobrania.forEach(wiersz => {
+    let startRow = wiersz;
+    const zakres = arkusz.getRange(wiersz, 1, 1, lastCol);
+    const scaloneWKolumnach = zakres.getMergedRanges();
+
+    scaloneWKolumnach.forEach(zakres => {
+      const zRow = zakres.getRow();
+      const zEnd = zRow + zakres.getNumRows() - 1;
+      if (zEnd === wiersz && zRow < startRow) {
+        startRow = zRow;
+      }
+    });
+
+    const wysokosc = wiersz - startRow + 1;
+    const pelnyZakres = arkusz.getRange(startRow, 1, wysokosc, lastCol);
+    pelnyZakres.setBorder(null, null, true, null, null, null, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  });
+}
