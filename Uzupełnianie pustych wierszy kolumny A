@@ -1,0 +1,20 @@
+function uzupelnijPusteKomorkiZGory() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+
+  const range = sheet.getRange("A1:A" + lastRow);
+  const values = range.getValues();
+
+  let lastValue = null;
+
+  for (let i = 0; i < values.length; i++) {
+    if (values[i][0] !== "") {
+      lastValue = values[i][0];
+    } else if (lastValue !== null) {
+      values[i][0] = lastValue;
+    }
+  }
+
+  // Wprowadź zaktualizowane dane z powrotem do arkusza
+  range.setValues(values);
+}
