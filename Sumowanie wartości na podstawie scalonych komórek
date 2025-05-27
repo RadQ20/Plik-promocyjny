@@ -1,0 +1,39 @@
+function sumujWartosciZKolumnySdoT() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+
+  const zakresT = sheet.getRange(1, 20, lastRow); // Kolumna T
+  const mergedRanges = zakresT.getMergedRanges();
+
+  // Najpierw rozliczamy scalone komórki
+  mergedRanges.forEach(range => {
+    const startRow = range.getRow();
+    const numRows = range.getNumRows();
+
+    // Pobierz odpowiednie wartości z kolumny S
+    const wartosciS = sheet.getRange(startRow, 19, numRows).getValues();
+    const suma = wartosciS.reduce((acc, val) => acc + (parseFloat(val[0]) || 0), 0);
+
+    // Ustaw sumę w pierwszej komórce scalonej grupy w kolumnie T
+    sheet.getRange(startRow, 20).setValue(suma);
+  });
+
+  // Teraz niescalone komórki w kolumnie T
+  const wszystkieScaloneWiersze = new Set();
+  mergedRanges.forEach(r => {
+    const sr = r.getRow();
+    const er = sr + r.getNumRows() - 1;
+    for (let i = sr; i <= er; i++) {
+      wszystkieScaloneWiersze.add(i);
+    }
+  });
+
+  // Przejdź przez pozostałe (niescalone) wiersze i wpisz pojedyncze wartości z S
+  for (let row = 1; row <= lastRow; row++) {
+    if (!wszystkieScaloneWiersze.has(row)) {
+      const valS = sheet.getRange(row, 19).getValue();
+      const liczba = parseFloat(valS) || 0;
+      sheet.getRange(row, 20).setValue(liczba);
+    }
+  }
+}
