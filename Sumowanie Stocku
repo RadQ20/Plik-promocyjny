@@ -1,0 +1,46 @@
+function sumujWartosciZKolumnyStock() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Szukamy numerów kolumn po nazwach
+  const kolumnaStockIdx = headers.indexOf("Stock") + 1;
+  const kolumnaSumaStockIdx = headers.indexOf("Suma Stock") + 1;
+
+  if (kolumnaStockIdx === 0 || kolumnaSumaStockIdx === 0) {
+    throw new Error('Nie znaleziono kolumny "Stock" lub "Suma Stock" w wierszu 1.');
+  }
+
+  const zakresSumaStock = sheet.getRange(2, kolumnaSumaStockIdx, lastRow - 1);
+  const mergedRanges = zakresSumaStock.getMergedRanges();
+
+  // Przetwarzanie scalonych komórek
+  mergedRanges.forEach(range => {
+    const startRow = range.getRow();
+    const numRows = range.getNumRows();
+
+    const wartosciStock = sheet.getRange(startRow, kolumnaStockIdx, numRows).getValues();
+    const suma = wartosciStock.reduce((acc, val) => acc + (parseFloat(val[0]) || 0), 0);
+
+    sheet.getRange(startRow, kolumnaSumaStockIdx).setValue(suma);
+  });
+
+  // Zbiór wierszy ze scaleniami
+  const wszystkieScaloneWiersze = new Set();
+  mergedRanges.forEach(r => {
+    const sr = r.getRow();
+    const er = sr + r.getNumRows() - 1;
+    for (let i = sr; i <= er; i++) {
+      wszystkieScaloneWiersze.add(i);
+    }
+  });
+
+  // Przepisanie wartości dla niescalonych wierszy
+  for (let row = 2; row <= lastRow; row++) {
+    if (!wszystkieScaloneWiersze.has(row)) {
+      const valStock = sheet.getRange(row, kolumnaStockIdx).getValue();
+      const liczba = parseFloat(valStock) || 0;
+      sheet.getRange(row, kolumnaSumaStockIdx).setValue(liczba);
+    }
+  }
+}
