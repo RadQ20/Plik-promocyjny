@@ -1,0 +1,46 @@
+function sumujSprzedazProduktu() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Znajdź indeksy kolumn po nazwach
+  const kolumnaSprzedazWariantuIdx = headers.indexOf("Sprzedaż wariantu") + 1;
+  const kolumnaSprzedazProduktuIdx = headers.indexOf("Sprzedaż produktu") + 1;
+
+  if (kolumnaSprzedazWariantuIdx === 0 || kolumnaSprzedazProduktuIdx === 0) {
+    throw new Error('Nie znaleziono kolumny "Sprzedaż wariantu" lub "Sprzedaż produktu" w wierszu 1.');
+  }
+
+  const zakresSprzedazProduktu = sheet.getRange(2, kolumnaSprzedazProduktuIdx, lastRow - 1);
+  const mergedRanges = zakresSprzedazProduktu.getMergedRanges();
+
+  // Sumowanie scalonych komórek
+  mergedRanges.forEach(range => {
+    const startRow = range.getRow();
+    const numRows = range.getNumRows();
+
+    const wartosciSprzedazWariantu = sheet.getRange(startRow, kolumnaSprzedazWariantuIdx, numRows).getValues();
+    const suma = wartosciSprzedazWariantu.reduce((acc, val) => acc + (parseFloat(val[0]) || 0), 0);
+
+    sheet.getRange(startRow, kolumnaSprzedazProduktuIdx).setValue(suma);
+  });
+
+  // Zbierz wiersze scalone, żeby pominąć je później
+  const wszystkieScaloneWiersze = new Set();
+  mergedRanges.forEach(r => {
+    const sr = r.getRow();
+    const er = sr + r.getNumRows() - 1;
+    for (let i = sr; i <= er; i++) {
+      wszystkieScaloneWiersze.add(i);
+    }
+  });
+
+  // Obsługa niescalonych wierszy
+  for (let row = 2; row <= lastRow; row++) {
+    if (!wszystkieScaloneWiersze.has(row)) {
+      const valSprzedazWariantu = sheet.getRange(row, kolumnaSprzedazWariantuIdx).getValue();
+      const liczba = parseFloat(valSprzedazWariantu) || 0;
+      sheet.getRange(row, kolumnaSprzedazProduktuIdx).setValue(liczba);
+    }
+  }
+}
