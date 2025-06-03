@@ -1,46 +1,39 @@
-function sumujSprzedazProduktu() {
+function sumujSprzedazProduktuZFormulami() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const lastRow = sheet.getLastRow();
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
-  // Znajdź indeksy kolumn po nazwach
-  const kolumnaSprzedazWariantuIdx = headers.indexOf("Sprzedaż wariantu") + 1;
-  const kolumnaSprzedazProduktuIdx = headers.indexOf("Sprzedaż produktu") + 1;
+  const kolSprzedazWariantu = headers.indexOf("Sprzedaż wariantu") + 1;
+  const kolSprzedazProduktu = headers.indexOf("Sprzedaż produktu") + 1;
 
-  if (kolumnaSprzedazWariantuIdx === 0 || kolumnaSprzedazProduktuIdx === 0) {
-    throw new Error('Nie znaleziono kolumny "Sprzedaż wariantu" lub "Sprzedaż produktu" w wierszu 1.');
+  if (kolSprzedazWariantu === 0 || kolSprzedazProduktu === 0) {
+    throw new Error('Nie znaleziono kolumn "Sprzedaż wariantu" lub "Sprzedaż produktu".');
   }
 
-  const zakresSprzedazProduktu = sheet.getRange(2, kolumnaSprzedazProduktuIdx, lastRow - 1);
+  const zakresSprzedazProduktu = sheet.getRange(2, kolSprzedazProduktu, lastRow - 1);
   const mergedRanges = zakresSprzedazProduktu.getMergedRanges();
 
-  // Sumowanie scalonych komórek
+  const scaloneWiersze = new Set();
+
+  // Obsługa scalonych wierszy — formuła z SUMA
   mergedRanges.forEach(range => {
     const startRow = range.getRow();
     const numRows = range.getNumRows();
+    const zakresFormuly = `R${startRow}C${kolSprzedazWariantu}:R${startRow + numRows - 1}C${kolSprzedazWariantu}`;
+    const formula = `=SUM(${zakresFormuly})`;
 
-    const wartosciSprzedazWariantu = sheet.getRange(startRow, kolumnaSprzedazWariantuIdx, numRows).getValues();
-    const suma = wartosciSprzedazWariantu.reduce((acc, val) => acc + (parseFloat(val[0]) || 0), 0);
+    sheet.getRange(startRow, kolSprzedazProduktu).setFormulaR1C1(formula);
 
-    sheet.getRange(startRow, kolumnaSprzedazProduktuIdx).setValue(suma);
-  });
-
-  // Zbierz wiersze scalone, żeby pominąć je później
-  const wszystkieScaloneWiersze = new Set();
-  mergedRanges.forEach(r => {
-    const sr = r.getRow();
-    const er = sr + r.getNumRows() - 1;
-    for (let i = sr; i <= er; i++) {
-      wszystkieScaloneWiersze.add(i);
+    for (let i = startRow; i < startRow + numRows; i++) {
+      scaloneWiersze.add(i);
     }
   });
 
-  // Obsługa niescalonych wierszy
+  // Obsługa niescalonych wierszy — formuła z odwołaniem do jednej komórki
   for (let row = 2; row <= lastRow; row++) {
-    if (!wszystkieScaloneWiersze.has(row)) {
-      const valSprzedazWariantu = sheet.getRange(row, kolumnaSprzedazWariantuIdx).getValue();
-      const liczba = parseFloat(valSprzedazWariantu) || 0;
-      sheet.getRange(row, kolumnaSprzedazProduktuIdx).setValue(liczba);
+    if (!scaloneWiersze.has(row)) {
+      const formula = `=R[0]C[-1]`; // wartość z kolumny „Sprzedaż wariantu”
+      sheet.getRange(row, kolSprzedazProduktu).setFormulaR1C1(formula);
     }
   }
 }
