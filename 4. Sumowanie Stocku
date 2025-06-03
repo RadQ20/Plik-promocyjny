@@ -1,46 +1,40 @@
-function sumujWartosciZKolumnyStock() {
+function sumujWartosciZKolumnyStockZFormulami() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const lastRow = sheet.getLastRow();
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   // Szukamy numerów kolumn po nazwach
-  const kolumnaStockIdx = headers.indexOf("Stock") + 1;
-  const kolumnaSumaStockIdx = headers.indexOf("Suma Stock") + 1;
+  const kolStock = headers.indexOf("Stock") + 1;
+  const kolSumaStock = headers.indexOf("Suma Stock") + 1;
 
-  if (kolumnaStockIdx === 0 || kolumnaSumaStockIdx === 0) {
+  if (kolStock === 0 || kolSumaStock === 0) {
     throw new Error('Nie znaleziono kolumny "Stock" lub "Suma Stock" w wierszu 1.');
   }
 
-  const zakresSumaStock = sheet.getRange(2, kolumnaSumaStockIdx, lastRow - 1);
+  const zakresSumaStock = sheet.getRange(2, kolSumaStock, lastRow - 1);
   const mergedRanges = zakresSumaStock.getMergedRanges();
 
-  // Przetwarzanie scalonych komórek
+  const scaloneWiersze = new Set();
+
+  // Dla scalonych wierszy – formuła SUMA
   mergedRanges.forEach(range => {
     const startRow = range.getRow();
     const numRows = range.getNumRows();
+    const zakresFormuly = `R${startRow}C${kolStock}:R${startRow + numRows - 1}C${kolStock}`;
+    const formula = `=SUM(${zakresFormuly})`;
 
-    const wartosciStock = sheet.getRange(startRow, kolumnaStockIdx, numRows).getValues();
-    const suma = wartosciStock.reduce((acc, val) => acc + (parseFloat(val[0]) || 0), 0);
+    sheet.getRange(startRow, kolSumaStock).setFormulaR1C1(formula);
 
-    sheet.getRange(startRow, kolumnaSumaStockIdx).setValue(suma);
-  });
-
-  // Zbiór wierszy ze scaleniami
-  const wszystkieScaloneWiersze = new Set();
-  mergedRanges.forEach(r => {
-    const sr = r.getRow();
-    const er = sr + r.getNumRows() - 1;
-    for (let i = sr; i <= er; i++) {
-      wszystkieScaloneWiersze.add(i);
+    for (let i = startRow; i < startRow + numRows; i++) {
+      scaloneWiersze.add(i);
     }
   });
 
-  // Przepisanie wartości dla niescalonych wierszy
+  // Dla niescalonych wierszy – formuła do jednej komórki
   for (let row = 2; row <= lastRow; row++) {
-    if (!wszystkieScaloneWiersze.has(row)) {
-      const valStock = sheet.getRange(row, kolumnaStockIdx).getValue();
-      const liczba = parseFloat(valStock) || 0;
-      sheet.getRange(row, kolumnaSumaStockIdx).setValue(liczba);
+    if (!scaloneWiersze.has(row)) {
+      const formula = `=R[0]C[-${kolSumaStock - kolStock}]`;
+      sheet.getRange(row, kolSumaStock).setFormulaR1C1(formula);
     }
   }
 }
