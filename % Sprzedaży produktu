@@ -1,0 +1,64 @@
+function obliczProcentSprzedazyProduktuUwzgledniajacScalenia() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  const kolumnaSprzedazProduktuIdx = headers.indexOf("Sprzedaż produktu") + 1;
+  const kolumnaSumaStockIdx = headers.indexOf("Suma Stock") + 1;
+  const kolumnaProcentSprzedazyIdx = headers.indexOf("% Sprzedaży produktu") + 1;
+
+  if (
+    kolumnaSprzedazProduktuIdx === 0 ||
+    kolumnaSumaStockIdx === 0 ||
+    kolumnaProcentSprzedazyIdx === 0
+  ) {
+    throw new Error('Nie znaleziono jednej z kolumn: "Sprzedaż produktu", "Suma Stock" lub "% Sprzedaży produktu" w wierszu 1.');
+  }
+
+  const zakresProcentSprzedazy = sheet.getRange(2, kolumnaProcentSprzedazyIdx, lastRow - 1);
+  const mergedRanges = zakresProcentSprzedazy.getMergedRanges();
+  const scaloneWierszeDoPominiecia = new Set();
+
+  // Formatowanie kolumny jako procent z dwoma miejscami po przecinku
+  sheet.getRange(2, kolumnaProcentSprzedazyIdx, lastRow - 1)
+       .setNumberFormat("0.00%");
+
+  mergedRanges.forEach(range => {
+    const startRow = range.getRow();
+    const numRows = range.getNumRows();
+
+    let sumaSprzedaz = 0;
+    let sumaStock = 0;
+
+    for (let i = 0; i < numRows; i++) {
+      const wiersz = startRow + i;
+      const sprzedaz = parseFloat(sheet.getRange(wiersz, kolumnaSprzedazProduktuIdx).getValue()) || 0;
+      const stock = parseFloat(sheet.getRange(wiersz, kolumnaSumaStockIdx).getValue()) || 0;
+      sumaSprzedaz += sprzedaz;
+      sumaStock += stock;
+
+      if (wiersz !== startRow) {
+        scaloneWierszeDoPominiecia.add(wiersz);
+      }
+    }
+
+    let procent = 0;
+    if (sumaStock > 0) {
+      procent = sumaSprzedaz / sumaStock; // ✅ zapis jako ułamek dziesiętny, np. 0.0412
+    }
+
+    sheet.getRange(startRow, kolumnaProcentSprzedazyIdx).setValue(procent);
+  });
+
+  for (let row = 2; row <= lastRow; row++) {
+    if (!scaloneWierszeDoPominiecia.has(row)) {
+      const sprzedaz = parseFloat(sheet.getRange(row, kolumnaSprzedazProduktuIdx).getValue()) || 0;
+      const stock = parseFloat(sheet.getRange(row, kolumnaSumaStockIdx).getValue()) || 0;
+      let procent = 0;
+      if (stock > 0) {
+        procent = sprzedaz / stock; // ✅ zapis jako ułamek dziesiętny
+      }
+      sheet.getRange(row, kolumnaProcentSprzedazyIdx).setValue(procent);
+    }
+  }
+}
