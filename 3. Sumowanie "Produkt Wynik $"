@@ -1,46 +1,40 @@
-function sumujWartosciZKolumnNazwanych() {
+function sumujWartosciZKolumnNazwanychZFormulami() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const lastRow = sheet.getLastRow();
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   // Szukamy numerów kolumn po nazwach
-  const kolumnaWynikIdx = headers.indexOf("Wynik $") + 1;
-  const kolumnaProduktWynikIdx = headers.indexOf("Produkt Wynik $") + 1;
+  const kolWynik = headers.indexOf("Wynik $") + 1;
+  const kolProduktWynik = headers.indexOf("Produkt Wynik $") + 1;
 
-  if (kolumnaWynikIdx === 0 || kolumnaProduktWynikIdx === 0) {
+  if (kolWynik === 0 || kolProduktWynik === 0) {
     throw new Error('Nie znaleziono kolumny "Wynik $" lub "Produkt Wynik $" w wierszu 1.');
   }
 
-  const zakresProduktWynik = sheet.getRange(2, kolumnaProduktWynikIdx, lastRow - 1);
+  const zakresProduktWynik = sheet.getRange(2, kolProduktWynik, lastRow - 1);
   const mergedRanges = zakresProduktWynik.getMergedRanges();
 
-  // Przetwarzanie scalonych komórek
+  const scaloneWiersze = new Set();
+
+  // Obsługa scalonych wierszy — formuła z SUMA
   mergedRanges.forEach(range => {
     const startRow = range.getRow();
     const numRows = range.getNumRows();
+    const zakresFormuly = `R${startRow}C${kolWynik}:R${startRow + numRows - 1}C${kolWynik}`;
+    const formula = `=SUM(${zakresFormuly})`;
 
-    const wartosciWynik = sheet.getRange(startRow, kolumnaWynikIdx, numRows).getValues();
-    const suma = wartosciWynik.reduce((acc, val) => acc + (parseFloat(val[0]) || 0), 0);
+    sheet.getRange(startRow, kolProduktWynik).setFormulaR1C1(formula);
 
-    sheet.getRange(startRow, kolumnaProduktWynikIdx).setValue(suma);
-  });
-
-  // Zbiór wierszy ze scaleniami
-  const wszystkieScaloneWiersze = new Set();
-  mergedRanges.forEach(r => {
-    const sr = r.getRow();
-    const er = sr + r.getNumRows() - 1;
-    for (let i = sr; i <= er; i++) {
-      wszystkieScaloneWiersze.add(i);
+    for (let i = startRow; i < startRow + numRows; i++) {
+      scaloneWiersze.add(i);
     }
   });
 
-  // Przepisanie wartości dla niescalonych wierszy
+  // Obsługa niescalonych wierszy — formuła odnosząca się do tej samej linii
   for (let row = 2; row <= lastRow; row++) {
-    if (!wszystkieScaloneWiersze.has(row)) {
-      const valWynik = sheet.getRange(row, kolumnaWynikIdx).getValue();
-      const liczba = parseFloat(valWynik) || 0;
-      sheet.getRange(row, kolumnaProduktWynikIdx).setValue(liczba);
+    if (!scaloneWiersze.has(row)) {
+      const formula = `=R[0]C[-${kolProduktWynik - kolWynik}]`;
+      sheet.getRange(row, kolProduktWynik).setFormulaR1C1(formula);
     }
   }
 }
