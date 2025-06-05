@@ -1,0 +1,108 @@
+function kopiujPelnePodsumowaniePromocji() {
+  // Tutaj definiujesz nazwy arkuszy, które chcesz wykorzystać
+  const NAZWA_ARKUSZA_ZRODLOWEGO = "Promocja 16.06";
+  const NAZWA_ARKUSZA_DOCELOWEGO = "Podsumowanie";
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const arkuszZrodlowy = ss.getSheetByName(NAZWA_ARKUSZA_ZRODLOWEGO);
+  const arkuszDocelowy = ss.getSheetByName(NAZWA_ARKUSZA_DOCELOWEGO);
+
+  if (!arkuszZrodlowy || !arkuszDocelowy) {
+    throw new Error(`Nie znaleziono jednego z arkuszy: "${NAZWA_ARKUSZA_ZRODLOWEGO}" lub "${NAZWA_ARKUSZA_DOCELOWEGO}"`);
+  }
+
+  const headers = arkuszZrodlowy.getRange(1, 1, 1, arkuszZrodlowy.getLastColumn()).getValues()[0];
+
+  const wymaganeKolumny = [
+    "Nazwa produktu",
+    "Suma stock",
+    "Cena brutto",
+    "Cena PROMO",
+    "% Zniżki"
+  ];
+
+  const indeksy = {};
+  for (let nazwa of wymaganeKolumny) {
+    const idx = headers.indexOf(nazwa);
+    if (idx === -1) {
+      throw new Error(`Nie znaleziono kolumny: "${nazwa}"`);
+    }
+    indeksy[nazwa] = idx + 1;
+  }
+
+  const lastRow = arkuszZrodlowy.getLastRow();
+  const daneDoSkopiowania = [];
+
+  const scaloneZakresy = arkuszZrodlowy.getRange(2, indeksy["Nazwa produktu"], lastRow - 1).getMergedRanges();
+  const scaloneWiersze = new Set();
+  for (let zakres of scaloneZakresy) {
+    const startRow = zakres.getRow();
+    scaloneWiersze.add(startRow);
+  }
+
+  for (let row = 2; row <= lastRow; row++) {
+    const nazwaProduktu = arkuszZrodlowy.getRange(row, indeksy["Nazwa produktu"]).getValue();
+    if (!nazwaProduktu) continue;
+
+    const poprzedniaNazwa = row > 2
+      ? arkuszZrodlowy.getRange(row - 1, indeksy["Nazwa produktu"]).getValue()
+      : null;
+    if (!scaloneWiersze.has(row) && nazwaProduktu === poprzedniaNazwa) {
+      continue;
+    }
+
+    const wiersz = wymaganeKolumny.map(k => arkuszZrodlowy.getRange(row, indeksy[k]).getValue());
+    daneDoSkopiowania.push(wiersz);
+  }
+
+  arkuszDocelowy.clearContents();
+  const liczbaKolumn = wymaganeKolumny.length;
+  const liczbaWierszy = daneDoSkopiowania.length;
+
+  // Wstaw nagłówki i dane
+  arkuszDocelowy.getRange(1, 1, 1, liczbaKolumn).setValues([wymaganeKolumny]);
+  if (liczbaWierszy > 0) {
+    arkuszDocelowy.getRange(2, 1, liczbaWierszy, liczbaKolumn).setValues(daneDoSkopiowania);
+
+    // Formatowanie waluty i procentów
+    arkuszDocelowy.getRange(2, 3, liczbaWierszy, 2).setNumberFormat("#,##0.00 zł");
+    arkuszDocelowy.getRange(2, 5, liczbaWierszy).setNumberFormat("0.00%");
+
+    // Wyśrodkowanie wszystkich kolumn poza "Nazwa produktu"
+    arkuszDocelowy.getRange(2, 2, liczbaWierszy, liczbaKolumn - 1).setHorizontalAlignment("center");
+
+    // Cienkie obramowanie dla danych
+    arkuszDocelowy.getRange(2, 1, liczbaWierszy, liczbaKolumn).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+  }
+
+  // Styl nagłówków
+  const naglowekRange = arkuszDocelowy.getRange(1, 1, 1, liczbaKolumn);
+  naglowekRange
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setBackground("#d5a6bd");
+
+  // Obramowanie nagłówków – wszystkie linie cienkie, dolna grubsza
+  naglowekRange.setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+  arkuszDocelowy.getRange(1, 1, 1, liczbaKolumn).setBorder(
+    null, null, true, null, null, null, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM
+  );
+
+  // Zablokowanie pierwszego wiersza
+  arkuszDocelowy.setFrozenRows(1);
+
+  // === Poprawione: Dopasowanie szerokości do najszerszego tekstu (nagłówki + dane) ===
+  const wszystkieWiersze = [[...wymaganeKolumny], ...daneDoSkopiowania];
+  for (let col = 0; col < liczbaKolumn; col++) {
+    let maxWidth = 0;
+    for (let row = 0; row < wszystkieWiersze.length; row++) {
+      const tekst = String(wszystkieWiersze[row][col]);
+      if (tekst.length > maxWidth) {
+        maxWidth = tekst.length;
+      }
+    }
+    // Przybliżenie: 7 pikseli na znak + zapas
+    const szerokoscPx = Math.min(500, maxWidth * 7 + 16);
+    arkuszDocelowy.setColumnWidth(col + 1, szerokoscPx);
+  }
+}
