@@ -12,7 +12,6 @@ function sumujSprzedazProduktuZFormulami() {
 
   const zakresSprzedazProduktu = sheet.getRange(2, kolSprzedazProduktu, lastRow - 1);
   const mergedRanges = zakresSprzedazProduktu.getMergedRanges();
-
   const scaloneWiersze = new Set();
 
   // Obsługa scalonych wierszy — formuła z SUMA
@@ -29,10 +28,10 @@ function sumujSprzedazProduktuZFormulami() {
     }
   });
 
-  // Obsługa niescalonych wierszy — formuła z odwołaniem do jednej komórki
+  // Obsługa niescalonych wierszy — formuła z odwołaniem bezwzględnym do właściwej kolumny
   for (let row = 2; row <= lastRow; row++) {
     if (!scaloneWiersze.has(row)) {
-      const formula = `=R[0]C[-1]`; // wartość z kolumny „Sprzedaż wariantu”
+      const formula = `=R${row}C${kolSprzedazWariantu}`;
       sheet.getRange(row, kolSprzedazProduktu).setFormulaR1C1(formula);
     }
   }
