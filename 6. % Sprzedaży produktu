@@ -4,7 +4,7 @@ function obliczProcentSprzedazyProduktuUwzgledniajacScalenia() {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   const kolumnaSprzedazProduktuIdx = headers.indexOf("Sprzedaż produktu") + 1;
-  const kolumnaSumaStockIdx = headers.indexOf("Suma Stock") + 1;
+  const kolumnaSumaStockIdx = headers.indexOf("Suma stock") + 1;
   const kolumnaProcentSprzedazyIdx = headers.indexOf("% Sprzedaży produktu") + 1;
 
   if (
@@ -12,7 +12,7 @@ function obliczProcentSprzedazyProduktuUwzgledniajacScalenia() {
     kolumnaSumaStockIdx === 0 ||
     kolumnaProcentSprzedazyIdx === 0
   ) {
-    throw new Error('Nie znaleziono jednej z kolumn: "Sprzedaż produktu", "Suma Stock" lub "% Sprzedaży produktu" w wierszu 1.');
+    throw new Error('Nie znaleziono jednej z kolumn: "Sprzedaż produktu", "Suma stock" lub "% Sprzedaży produktu" w wierszu 1.');
   }
 
   const zakresProcentSprzedazy = sheet.getRange(2, kolumnaProcentSprzedazyIdx, lastRow - 1);
