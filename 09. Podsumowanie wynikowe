@@ -1,0 +1,83 @@
+function przetworzWynikiZScaleniami() {
+  const NAZWA_ARKUSZA_ZRODLOWEGO = "Promocja 09.07.2025";
+  const NAZWA_ARKUSZA_WYNIKOWEGO = "Wynik";
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const arkuszZrodlowy = ss.getSheetByName(NAZWA_ARKUSZA_ZRODLOWEGO);
+  const arkuszWynikowy = ss.getSheetByName(NAZWA_ARKUSZA_WYNIKOWEGO);
+
+  const lastRow = arkuszZrodlowy.getLastRow();
+  const lastCol = arkuszZrodlowy.getLastColumn();
+  const headers = arkuszZrodlowy.getRange(1, 1, 1, lastCol).getValues()[0];
+
+  const kolumnaNazwaIdx = headers.indexOf("Nazwa produktu") + 1;
+  const kolumnaWynikIdx = headers.indexOf("Wynik $") + 1;
+
+  if (kolumnaNazwaIdx === 0 || kolumnaWynikIdx === 0) {
+    throw new Error('Nie znaleziono jednej z kolumn: "Nazwa produktu" lub "Wynik $"');
+  }
+
+  const zakresNazwy = arkuszZrodlowy.getRange(2, kolumnaNazwaIdx, lastRow - 1);
+  const mergedRanges = zakresNazwy.getMergedRanges();
+  const przetworzoneWiersze = new Set();
+
+  const wyniki = [];
+
+  // Przetwarzanie scalonych wierszy
+  mergedRanges.forEach(range => {
+    const startRow = range.getRow();
+    const numRows = range.getNumRows();
+
+    const nazwa = arkuszZrodlowy.getRange(startRow, kolumnaNazwaIdx).getValue();
+    if (!nazwa || nazwa.toString().trim() === "") return;
+
+    let suma = 0;
+    for (let i = 0; i < numRows; i++) {
+      const wiersz = startRow + i;
+      const wartosc = parseFloat(arkuszZrodlowy.getRange(wiersz, kolumnaWynikIdx).getValue()) || 0;
+      suma += wartosc;
+      przetworzoneWiersze.add(wiersz);
+    }
+
+    wyniki.push([nazwa, suma]);
+  });
+
+  // Przetwarzanie niescalonych wierszy
+  for (let row = 2; row <= lastRow; row++) {
+    if (przetworzoneWiersze.has(row)) continue;
+
+    const nazwa = arkuszZrodlowy.getRange(row, kolumnaNazwaIdx).getValue();
+    if (!nazwa || nazwa.toString().trim() === "") continue;
+
+    const wartosc = parseFloat(arkuszZrodlowy.getRange(row, kolumnaWynikIdx).getValue()) || 0;
+    wyniki.push([nazwa, wartosc]);
+  }
+
+  // Sortowanie malejąco po wyniku
+  wyniki.sort((a, b) => b[1] - a[1]);
+
+  // Czyszczenie i przygotowanie arkusza wynikowego
+  arkuszWynikowy.clearContents();
+
+  const headerRange = arkuszWynikowy.getRange(1, 1, 1, 2);
+  headerRange.setValues([["Nazwa produktu", "Suma Wynik $"]]);
+  headerRange.setBackground("#ead1dc");
+  headerRange.setFontWeight("bold");
+  headerRange.setHorizontalAlignment("center");
+
+  if (wyniki.length > 0) {
+    const daneRange = arkuszWynikowy.getRange(2, 1, wyniki.length, 2);
+    daneRange.setValues(wyniki);
+
+    // Format kolumny B jako "100,00 zł"
+    const kolumnaWynikRange = arkuszWynikowy.getRange(2, 2, wyniki.length);
+    kolumnaWynikRange.setNumberFormat('#,##0.00 "zł"');
+  }
+
+  // Obramowanie całego zakresu (nagłówek + dane)
+  const calyZakres = arkuszWynikowy.getRange(1, 1, wyniki.length + 1, 2);
+  calyZakres.setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+
+  // Pogrubiona dolna krawędź nagłówka
+  headerRange.setBorder(null, null, true, null, null, null, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+}
