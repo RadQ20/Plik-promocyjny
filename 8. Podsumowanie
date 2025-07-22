@@ -1,21 +1,26 @@
 function kopiujPelnePodsumowaniePromocji() {
-  // Tutaj definiujesz nazwy arkuszy, które chcesz wykorzystać
-  const NAZWA_ARKUSZA_ZRODLOWEGO = "Promocja 16.06";
+  const NAZWA_ARKUSZA_ZRODLOWEGO = "Promocja 23.07.2025";
   const NAZWA_ARKUSZA_DOCELOWEGO = "Podsumowanie";
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const arkuszZrodlowy = ss.getSheetByName(NAZWA_ARKUSZA_ZRODLOWEGO);
-  const arkuszDocelowy = ss.getSheetByName(NAZWA_ARKUSZA_DOCELOWEGO);
+  let arkuszDocelowy = ss.getSheetByName(NAZWA_ARKUSZA_DOCELOWEGO);
 
-  if (!arkuszZrodlowy || !arkuszDocelowy) {
-    throw new Error(`Nie znaleziono jednego z arkuszy: "${NAZWA_ARKUSZA_ZRODLOWEGO}" lub "${NAZWA_ARKUSZA_DOCELOWEGO}"`);
+  if (!arkuszZrodlowy) {
+    throw new Error(`Nie znaleziono arkusza źródłowego: "${NAZWA_ARKUSZA_ZRODLOWEGO}"`);
   }
+
+  // Jeśli arkusz docelowy istnieje – usuń go i utwórz nowy
+  if (arkuszDocelowy) {
+    ss.deleteSheet(arkuszDocelowy);
+  }
+  arkuszDocelowy = ss.insertSheet(NAZWA_ARKUSZA_DOCELOWEGO);
 
   const headers = arkuszZrodlowy.getRange(1, 1, 1, arkuszZrodlowy.getLastColumn()).getValues()[0];
 
   const wymaganeKolumny = [
     "Nazwa produktu",
-    "Suma stock",
+    "Suma Stock",
     "Cena brutto",
     "Cena PROMO",
     "% Zniżki"
@@ -55,7 +60,6 @@ function kopiujPelnePodsumowaniePromocji() {
     daneDoSkopiowania.push(wiersz);
   }
 
-  arkuszDocelowy.clearContents();
   const liczbaKolumn = wymaganeKolumny.length;
   const liczbaWierszy = daneDoSkopiowania.length;
 
@@ -84,14 +88,14 @@ function kopiujPelnePodsumowaniePromocji() {
 
   // Obramowanie nagłówków – wszystkie linie cienkie, dolna grubsza
   naglowekRange.setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
-  arkuszDocelowy.getRange(1, 1, 1, liczbaKolumn).setBorder(
+  naglowekRange.setBorder(
     null, null, true, null, null, null, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM
   );
 
   // Zablokowanie pierwszego wiersza
   arkuszDocelowy.setFrozenRows(1);
 
-  // === Poprawione: Dopasowanie szerokości do najszerszego tekstu (nagłówki + dane) ===
+  // Dopasowanie szerokości kolumn
   const wszystkieWiersze = [[...wymaganeKolumny], ...daneDoSkopiowania];
   for (let col = 0; col < liczbaKolumn; col++) {
     let maxWidth = 0;
@@ -101,7 +105,6 @@ function kopiujPelnePodsumowaniePromocji() {
         maxWidth = tekst.length;
       }
     }
-    // Przybliżenie: 7 pikseli na znak + zapas
     const szerokoscPx = Math.min(500, maxWidth * 7 + 16);
     arkuszDocelowy.setColumnWidth(col + 1, szerokoscPx);
   }
