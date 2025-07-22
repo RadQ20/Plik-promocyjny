@@ -1,10 +1,21 @@
 function przetworzWynikiZScaleniami() {
-  const NAZWA_ARKUSZA_ZRODLOWEGO = "Promocja 09.07.2025";
+  const NAZWA_ARKUSZA_ZRODLOWEGO = "Promocja 23.07.2025";
   const NAZWA_ARKUSZA_WYNIKOWEGO = "Wynik";
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const arkuszZrodlowy = ss.getSheetByName(NAZWA_ARKUSZA_ZRODLOWEGO);
-  const arkuszWynikowy = ss.getSheetByName(NAZWA_ARKUSZA_WYNIKOWEGO);
+  let arkuszWynikowy = ss.getSheetByName(NAZWA_ARKUSZA_WYNIKOWEGO);
+
+  if (!arkuszZrodlowy) {
+    throw new Error(`Nie znaleziono arkusza źródłowego: "${NAZWA_ARKUSZA_ZRODLOWEGO}"`);
+  }
+
+  // Jeśli arkusz wynikowy istnieje – usuń go
+  if (arkuszWynikowy) {
+    ss.deleteSheet(arkuszWynikowy);
+  }
+  // Utwórz nowy arkusz wynikowy
+  arkuszWynikowy = ss.insertSheet(NAZWA_ARKUSZA_WYNIKOWEGO);
 
   const lastRow = arkuszZrodlowy.getLastRow();
   const lastCol = arkuszZrodlowy.getLastColumn();
@@ -56,9 +67,7 @@ function przetworzWynikiZScaleniami() {
   // Sortowanie malejąco po wyniku
   wyniki.sort((a, b) => b[1] - a[1]);
 
-  // Czyszczenie i przygotowanie arkusza wynikowego
-  arkuszWynikowy.clearContents();
-
+  // Wstawienie nagłówka
   const headerRange = arkuszWynikowy.getRange(1, 1, 1, 2);
   headerRange.setValues([["Nazwa produktu", "Suma Wynik $"]]);
   headerRange.setBackground("#ead1dc");
